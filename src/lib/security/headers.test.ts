@@ -19,6 +19,11 @@ describe("buildSecurityHeaders", () => {
     expect(headers["X-Content-Type-Options"]).toBe("nosniff");
   });
 
+  it("returns Referrer-Policy: no-referrer", () => {
+    const headers = buildSecurityHeaders();
+    expect(headers["Referrer-Policy"]).toBe("no-referrer");
+  });
+
   it("returns X-Frame-Options: DENY", () => {
     const headers = buildSecurityHeaders();
     expect(headers["X-Frame-Options"]).toBe("DENY");
@@ -43,7 +48,7 @@ describe("buildSecurityHeaders", () => {
     vi.stubEnv("NODE_ENV", "development");
     const headers = buildSecurityHeaders();
     expect(headers["Content-Security-Policy"]).toContain(
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     );
   });
 
@@ -65,7 +70,7 @@ describe("buildResponseSecurityHeaders", () => {
     }
 
     expect(headers["x-request-id"]).toBe("request-123");
-    expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
+    expect(headers["Referrer-Policy"]).toBe("no-referrer");
     expect(headers["Cross-Origin-Opener-Policy"]).toBe("same-origin");
     expect(headers["Cross-Origin-Resource-Policy"]).toBe("same-origin");
   });
@@ -73,7 +78,7 @@ describe("buildResponseSecurityHeaders", () => {
   it("adds Cache-Control: no-store only when noStore is set", () => {
     expect(buildResponseSecurityHeaders("request-123")["Cache-Control"]).toBeUndefined();
     expect(buildResponseSecurityHeaders("request-123", { noStore: true })["Cache-Control"]).toBe(
-      "no-store"
+      "no-store",
     );
   });
 });
@@ -87,6 +92,32 @@ describe("applySecurityHeaders", () => {
       expect(response.headers.get(key)).toBe(value);
     }
     expect(response.headers.get("x-request-id")).toBe("request-abc");
+  });
+
+  it("writes the full header set onto error responses so 4xx/5xx stay protected", () => {
+    const response = NextResponse.json({ error: "Unauthorized. Login required." }, { status: 401 });
+    applySecurityHeaders(response, "request-abc", { noStore: true });
+
+    expect(response.status).toBe(401);
+    for (const [key, value] of Object.entries(buildSecurityHeaders())) {
+      expect(response.headers.get(key)).toBe(value);
+    }
+    expect(response.headers.get("Referrer-Policy")).toBe("no-referrer");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("preserves route-specific headers such as rate limit and retry hints", () => {
+    const response = NextResponse.json(
+      { error: "Too many login attempts. Try again later." },
+      { status: 429, headers: { "X-RateLimit-Limit": "15", "Retry-After": "30" } },
+    );
+    applySecurityHeaders(response, "request-abc");
+
+    expect(response.headers.get("X-RateLimit-Limit")).toBe("15");
+    expect(response.headers.get("Retry-After")).toBe("30");
+    for (const [key, value] of Object.entries(buildSecurityHeaders())) {
+      expect(response.headers.get(key)).toBe(value);
+    }
   });
 
   it("marks the response no-store when requested", () => {

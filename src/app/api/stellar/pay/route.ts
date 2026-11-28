@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { checkBlocklist } from "@/lib/security/blocklist";
 import { consumeRateLimit, rateLimitHeaders } from "@/lib/security/rate-limit";
+import { securityHeadersForRequest } from "@/lib/security/headers";
 import { verifyPaymentAgainstQuote } from "@/lib/stellar/verify-payment-quote";
 import { getAuditEntryById } from "@/lib/storage/audit-store";
 import { stellarBuildPaymentRequestSchema } from "@/lib/validation/schemas";

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getWalletFromSession } from "@/lib/auth/session-wallet";
 import { checkBlocklist } from "@/lib/security/blocklist";
+import { securityHeadersForRequest } from "@/lib/security/headers";
 import { getNativeBalance } from "@/lib/stellar/client";
 import { getUserWallet, upsertUserWallet } from "@/lib/storage/user-wallet-store";
 

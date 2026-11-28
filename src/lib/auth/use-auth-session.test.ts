@@ -41,6 +41,9 @@ const WALLET = `G${"A".repeat(55)}`;
 
 function renderSession() {
   hookIndex = 0;
+  // react is mocked above (useState and friends are replaced), so this is not a real render
+  // and the hook can be called directly from this test helper.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   return useAuthSession();
 }
 

@@ -11,6 +11,11 @@ export type AuthSession = {
   email: string;
   role: AuthRole;
   /**
+   * Additive roles granted to the same wallet. The primary `role` stays the
+   * least-privileged baseline; gates check the full list.
+   */
+  roles?: AuthRole[];
+  /**
    * Session id. Minted once at login and carried forward by refresh, so every
    * token generation of one login shares it. Logout revokes by this id.
    */
@@ -68,12 +73,14 @@ export function createSessionToken(input: {
   publicKey?: string;
   generation?: number;
   sessionId?: string;
+  roles?: AuthRole[];
 }) {
   const now = Math.floor(Date.now() / 1000);
   const payload: AuthSession = {
     userId: input.userId ?? randomUUID(),
     email: input.email,
     role: input.role,
+    ...(input.roles ? { roles: input.roles } : {}),
     sid: normalizeSessionId(input.sessionId) ?? randomUUID(),
     exp: now + (input.expiresInSeconds ?? DEFAULT_SESSION_TTL_SECONDS),
     publicKey: input.publicKey,
@@ -146,6 +153,7 @@ export function verifySessionToken(token: string, options?: VerifySessionTokenOp
       userId: parsed.userId,
       email: parsed.email,
       role: parsed.role,
+      ...(parsed.roles ? { roles: parsed.roles } : {}),
       exp: parsed.exp,
       gen: normalizeGeneration(parsed.gen),
       sid,
@@ -226,6 +234,7 @@ export function rotateSessionToken(session: AuthSession) {
     userId: session.userId,
     generation: rotated.generation,
     sessionId: session.sid,
+    roles: session.roles,
   });
 
   return { token, generation: rotated.generation };

@@ -18,6 +18,7 @@ export function buildSecurityHeaders(): Record<string, string> {
     "X-Frame-Options": "DENY",
     "Content-Security-Policy": cspDirectives.join("; "),
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Referrer-Policy": "no-referrer",
   };
 }
 
@@ -41,7 +42,7 @@ export function buildResponseSecurityHeaders(
 ): Record<string, string> {
   const headers: Record<string, string> = {
     "x-request-id": requestId,
-    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Referrer-Policy": "no-referrer",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-origin",
     ...buildSecurityHeaders(),
@@ -57,7 +58,8 @@ export function buildResponseSecurityHeaders(
 /**
  * Shared header writer used by the proxy and route handlers. Applies the full
  * security header set to an existing response so success and error responses
- * cannot drift apart.
+ * cannot drift apart. Route-specific headers (rate limit, retry hints,
+ * content disposition) are left untouched.
  */
 export function applySecurityHeaders<T extends { headers: Headers }>(
   response: T,
